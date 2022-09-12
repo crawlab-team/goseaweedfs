@@ -26,7 +26,7 @@ type httpClient struct {
 func newHTTPClient(client *http.Client, opts ...HttpClientOption) *httpClient {
 	c := &httpClient{
 		client:  client,
-		workers: createWorkerPool(),
+		workers: CreateWorkerPool(),
 	}
 
 	// apply options
@@ -58,7 +58,7 @@ func (c *httpClient) get(url string, header map[string]string) (body []byte, sta
 		var resp *http.Response
 		resp, err = c.client.Do(req)
 		if err == nil {
-			body, statusCode, err = readAll(resp)
+			body, statusCode, err = ReadAll(resp)
 
 			// empty file check
 			if IsFileMarkBytes(body, EmptyMark) {
@@ -86,7 +86,7 @@ func (c *httpClient) delete(url string) (statusCode int, err error) {
 		return
 	}
 
-	body, statusCode, err := readAll(r)
+	body, statusCode, err := ReadAll(r)
 	if err == nil {
 		switch r.StatusCode {
 		case http.StatusNoContent, http.StatusNotFound, http.StatusAccepted, http.StatusOK:
@@ -122,7 +122,7 @@ func (c *httpClient) download(url string, callback func(io.Reader) error) (filen
 	r, err := c.client.Do(req)
 	if err == nil {
 		if r.StatusCode != http.StatusOK {
-			drainAndClose(r.Body)
+			DrainAndClose(r.Body)
 			err = fmt.Errorf("Download %s but error. Status:%s", url, r.Status)
 			return
 		}
@@ -155,7 +155,7 @@ func (c *httpClient) download(url string, callback func(io.Reader) error) (filen
 		err = callback(readWriter)
 
 		// drain and close body
-		drainAndClose(r.Body)
+		DrainAndClose(r.Body)
 	}
 
 	return
@@ -217,7 +217,7 @@ func (c *httpClient) upload(url string, filename string, fileReader io.Reader, m
 	_ = r.Close()
 
 	if err == nil {
-		if respBody, statusCode, err = readAll(res); err == nil {
+		if respBody, statusCode, err = ReadAll(res); err == nil {
 			result := <-task.Result()
 			err = result.Err
 		}

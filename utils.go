@@ -16,13 +16,13 @@ import (
 	workerpool "github.com/linxGnu/gumble/worker-pool"
 )
 
-func createWorkerPool() *workerpool.Pool {
+func CreateWorkerPool() *workerpool.Pool {
 	return workerpool.NewPool(context.Background(), workerpool.Option{
 		NumberWorker: runtime.NumCPU() << 1,
 	})
 }
 
-func parseURI(uri string) (u *url.URL, err error) {
+func ParseURI(uri string) (u *url.URL, err error) {
 	u, err = url.Parse(uri)
 	if err == nil && u.Scheme == "" {
 		u.Scheme = "http"
@@ -30,7 +30,7 @@ func parseURI(uri string) (u *url.URL, err error) {
 	return
 }
 
-func encodeURI(base url.URL, path string, args url.Values) string {
+func EncodeURI(base url.URL, path string, args url.Values) string {
 	base.Path += path
 	query := base.Query()
 	args = normalize(args, "", "")
@@ -65,7 +65,7 @@ func normalizeName(st string) string {
 	return st
 }
 
-func drainAndClose(body io.ReadCloser) {
+func DrainAndClose(body io.ReadCloser) {
 	_, _ = io.Copy(ioutil.Discard, body)
 	_ = body.Close()
 }
@@ -86,14 +86,14 @@ func normalize(values url.Values, collection, ttl string) url.Values {
 	return values
 }
 
-func readAll(r *http.Response) (body []byte, statusCode int, err error) {
+func ReadAll(r *http.Response) (body []byte, statusCode int, err error) {
 	statusCode = r.StatusCode
 	body, err = ioutil.ReadAll(r.Body)
 	r.Body.Close()
 	return
 }
 
-func isDir(path string) bool {
+func IsDir(path string) bool {
 	s, err := os.Stat(path)
 	if err != nil {
 		return false
@@ -101,14 +101,14 @@ func isDir(path string) bool {
 	return s.IsDir()
 }
 
-func listFilesRecursive(dirPath string) (files []FileInfo, err error) {
+func ListFilesRecursive(dirPath string) (files []FileInfo, err error) {
 	if err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
-		if !isDir(path) {
+		if !IsDir(path) {
 			f, err := os.Open(path)
 			if err != nil {
 				return err
 			}
-			md5sum, err := getFileMd5sum(path)
+			md5sum, err := GetFileMd5sum(path)
 			if err != nil {
 				return err
 			}
@@ -130,17 +130,17 @@ func listFilesRecursive(dirPath string) (files []FileInfo, err error) {
 }
 
 func ListLocalFilesRecursive(dirPath string) (files []FileInfo, err error) {
-	return listFilesRecursive(dirPath)
+	return ListFilesRecursive(dirPath)
 }
 
-func getFileName(fullPath string) (fileName string) {
+func GetFileName(fullPath string) (fileName string) {
 	// get file name
 	arr := strings.Split(fullPath, "/")
 	fileName = arr[len(arr)-1]
 	return fileName
 }
 
-func getFileExtension(fileName string) (extension string) {
+func GetFileExtension(fileName string) (extension string) {
 	// get file extension
 	if strings.HasPrefix(fileName, ".") {
 		fileName = fileName[1:(len(fileName) - 1)]
@@ -152,34 +152,30 @@ func getFileExtension(fileName string) (extension string) {
 	return extension
 }
 
-func getFileWithExtendedFields(file FilerFileInfo) (res FilerFileInfo) {
-	// get isDir
+func GetFileWithExtendedFields(file FilerFileInfo) (res FilerFileInfo) {
+	// get IsDir
 	file.IsDir = file.Chunks == nil
 
 	// get name
-	file.Name = getFileName(file.FullPath)
+	file.Name = GetFileName(file.FullPath)
 
 	// get file extension
 	if !file.IsDir {
-		file.Extension = getFileExtension(file.Name)
+		file.Extension = GetFileExtension(file.Name)
 	}
 
 	return file
 }
 
-func getFileMd5sum(filePath string) (md5sum string, err error) {
+func GetFileMd5sum(filePath string) (md5sum string, err error) {
 	data, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return md5sum, err
 	}
-	return getBytesMd5sum(data)
+	return GetBytesMd5sum(data)
 }
 
-func GetFileMd5sum(filePath string) (md5sum string, err error) {
-	return getFileMd5sum(filePath)
-}
-
-func getBytesMd5sum(data []byte) (md5sum string, err error) {
+func GetBytesMd5sum(data []byte) (md5sum string, err error) {
 	h := md5.New()
 	content := strings.NewReader(string(data))
 	_, err = content.WriteTo(h)
@@ -188,8 +184,4 @@ func getBytesMd5sum(data []byte) (md5sum string, err error) {
 	}
 	md5sum = base64.StdEncoding.EncodeToString(h.Sum(nil))
 	return md5sum, nil
-}
-
-func GetBytesMd5sum(data []byte) (md5sum string, err error) {
-	return getBytesMd5sum(data)
 }

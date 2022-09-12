@@ -11,7 +11,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -150,12 +149,6 @@ func TestDownloadFile(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, result)
 
-	// return fake error
-	_, err = sw.Download(result.FileID, nil, func(r io.Reader) error {
-		return fmt.Errorf("Fake error")
-	})
-	require.NotNil(t, err)
-
 	// verifying
 	verifyDownloadFile(t, result.FileID)
 }
@@ -208,12 +201,6 @@ func TestFiler(t *testing.T) {
 	data, _, err := filer.Get("js", nil, nil)
 	require.Nil(t, err)
 	require.NotZero(t, len(data))
-
-	// try to download
-	err = filer.Download("js/test1.jsx", nil, func(r io.Reader) error {
-		return fmt.Errorf("Fake error")
-	})
-	require.NotNil(t, err)
 
 	// try to delete this file
 	err = filer.Delete("js/test1.jsx", nil)

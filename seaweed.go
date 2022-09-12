@@ -96,7 +96,7 @@ type Seaweed struct {
 
 // NewSeaweed create new seaweed client. Master url must be a valid uri (which includes scheme).
 func NewSeaweed(masterURL string, filers []string, chunkSize int64, client *http.Client) (c *Seaweed, err error) {
-	u, err := parseURI(masterURL)
+	u, err := ParseURI(masterURL)
 	if err != nil {
 		return
 	}
@@ -121,7 +121,7 @@ func NewSeaweed(masterURL string, filers []string, chunkSize int64, client *http
 	}
 
 	// start underlying workers
-	c.workers = createWorkerPool()
+	c.workers = CreateWorkerPool()
 	c.workers.Start()
 
 	return
@@ -160,7 +160,7 @@ func (c *Seaweed) Grow(count int, collection, replication, dataCenter string) er
 
 // GrowArgs pre-Allocate volumes with args.
 func (c *Seaweed) GrowArgs(args url.Values) (err error) {
-	_, _, err = c.client.get(encodeURI(*c.master, "/vol/grow", args), nil)
+	_, _, err = c.client.get(EncodeURI(*c.master, "/vol/grow", args), nil)
 	return
 }
 
@@ -174,7 +174,7 @@ func (c *Seaweed) doLookup(volID string, args url.Values) (result *LookupResult,
 	args = normalize(args, "", "")
 	args.Set(ParamLookupVolumeID, volID)
 
-	jsonBlob, _, err := c.client.get(encodeURI(*c.master, "/dir/lookup", args), nil)
+	jsonBlob, _, err := c.client.get(EncodeURI(*c.master, "/dir/lookup", args), nil)
 	if err == nil {
 		result = &LookupResult{}
 		if err = json.Unmarshal(jsonBlob, result); err == nil {
@@ -235,13 +235,13 @@ func (c *Seaweed) GC(threshold float64) (err error) {
 	args := url.Values{
 		"garbageThreshold": []string{strconv.FormatFloat(threshold, 'f', -1, 64)},
 	}
-	_, _, err = c.client.get(encodeURI(*c.master, "/vol/vacuum", args), nil)
+	_, _, err = c.client.get(EncodeURI(*c.master, "/vol/vacuum", args), nil)
 	return
 }
 
 // Status check System Status.
 func (c *Seaweed) Status() (result *SystemStatus, err error) {
-	data, _, err := c.client.get(encodeURI(*c.master, "/dir/status", nil), nil)
+	data, _, err := c.client.get(EncodeURI(*c.master, "/dir/status", nil), nil)
 	if err == nil {
 		result = &SystemStatus{}
 		err = json.Unmarshal(data, result)
@@ -251,7 +251,7 @@ func (c *Seaweed) Status() (result *SystemStatus, err error) {
 
 // ClusterStatus get cluster status.
 func (c *Seaweed) ClusterStatus() (result *ClusterStatus, err error) {
-	data, _, err := c.client.get(encodeURI(*c.master, "/cluster/status", nil), nil)
+	data, _, err := c.client.get(EncodeURI(*c.master, "/cluster/status", nil), nil)
 	if err == nil {
 		result = &ClusterStatus{}
 		err = json.Unmarshal(data, result)
@@ -261,7 +261,7 @@ func (c *Seaweed) ClusterStatus() (result *ClusterStatus, err error) {
 
 // Assign do assign api.
 func (c *Seaweed) Assign(args url.Values) (result *AssignResult, err error) {
-	jsonBlob, _, err := c.client.get(encodeURI(*c.master, "/dir/assign", args), nil)
+	jsonBlob, _, err := c.client.get(EncodeURI(*c.master, "/dir/assign", args), nil)
 	if err == nil {
 		result = &AssignResult{}
 		if err = json.Unmarshal(jsonBlob, result); err != nil {
@@ -286,7 +286,7 @@ func (c *Seaweed) Submit(filePath string, collection, ttl string) (result *Submi
 
 // SubmitFilePart directly to master.
 func (c *Seaweed) SubmitFilePart(f *FilePart, args url.Values) (result *SubmitResult, err error) {
-	data, _, err := c.client.upload(encodeURI(*c.master, "/submit", args), f.FileName, f.Reader, f.MimeType)
+	data, _, err := c.client.upload(EncodeURI(*c.master, "/submit", args), f.FileName, f.Reader, f.MimeType)
 	if err == nil {
 		result = &SubmitResult{}
 		err = json.Unmarshal(data, result)
@@ -368,7 +368,7 @@ func (c *Seaweed) UploadFilePart(f *FilePart) (cm *ChunkManifest, err error) {
 		base := *c.master
 		base.Host = f.Server
 
-		_, _, err = c.client.upload(encodeURI(base, f.FileID, args), baseName, f.Reader, f.MimeType)
+		_, _, err = c.client.upload(EncodeURI(base, f.FileID, args), baseName, f.Reader, f.MimeType)
 	}
 
 	return
@@ -479,7 +479,7 @@ func (c *Seaweed) uploadChunk(f *FilePart, filename string) (assignResult *Assig
 		// do upload
 		var v []byte
 		v, _, err = c.client.upload(
-			encodeURI(base, assignResult.FileID, nil),
+			EncodeURI(base, assignResult.FileID, nil),
 			filename, io.LimitReader(f.Reader, c.chunkSize),
 			"application/octet-stream")
 		if err == nil {
@@ -508,7 +508,7 @@ func (c *Seaweed) uploadManifest(f *FilePart, manifest *ChunkManifest) (err erro
 		base := *c.master
 		base.Host = f.Server
 
-		_, _, err = c.client.upload(encodeURI(base, f.FileID, args), manifest.Name, bufReader, "application/json")
+		_, _, err = c.client.upload(EncodeURI(base, f.FileID, args), manifest.Name, bufReader, "application/json")
 	}
 	return
 }

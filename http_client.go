@@ -2,7 +2,6 @@ package goseaweedfs
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,20 +12,16 @@ import (
 	"net/textproto"
 	"path/filepath"
 	"strings"
-
-	workerpool "github.com/linxGnu/gumble/worker-pool"
 )
 
 type httpClient struct {
 	client  *http.Client
-	workers *workerpool.Pool
 	authKey string
 }
 
 func newHTTPClient(client *http.Client, opts ...HttpClientOption) *httpClient {
 	c := &httpClient{
-		client:  client,
-		workers: CreateWorkerPool(),
+		client: client,
 	}
 
 	// apply options
@@ -34,12 +29,10 @@ func newHTTPClient(client *http.Client, opts ...HttpClientOption) *httpClient {
 		opt(c)
 	}
 
-	c.workers.Start()
 	return c
 }
 
 func (c *httpClient) Close() (err error) {
-	c.workers.Stop()
 	return
 }
 
@@ -58,7 +51,7 @@ func (c *httpClient) get(url string, header map[string]string) (body []byte, sta
 		var resp *http.Response
 		resp, err = c.client.Do(req)
 		if err == nil {
-			body, statusCode, err = ReadAll(resp)
+			body, statusCode, err = readAll(resp)
 
 			// empty file check
 			if IsFileMarkBytes(body, EmptyMark) {
@@ -86,7 +79,7 @@ func (c *httpClient) delete(url string) (statusCode int, err error) {
 		return
 	}
 
-	body, statusCode, err := ReadAll(r)
+	body, statusCode, err := readAll(r)
 	if err == nil {
 		switch r.StatusCode {
 		case http.StatusNoContent, http.StatusNotFound, http.StatusAccepted, http.StatusOK:
@@ -122,7 +115,7 @@ func (c *httpClient) download(url string, callback func(io.Reader) error) (filen
 	r, err := c.client.Do(req)
 	if err == nil {
 		if r.StatusCode != http.StatusOK {
-			DrainAndClose(r.Body)
+			drainAndClose(r.Body)
 			err = fmt.Errorf("Download %s but error. Status:%s", url, r.Status)
 			return
 		}
@@ -155,7 +148,7 @@ func (c *httpClient) download(url string, callback func(io.Reader) error) (filen
 		err = callback(readWriter)
 
 		// drain and close body
-		DrainAndClose(r.Body)
+		drainAndClose(r.Body)
 	}
 
 	return
@@ -167,7 +160,8 @@ func (c *httpClient) upload(url string, filename string, fileReader io.Reader, m
 	// create multipart writer
 	mw := multipart.NewWriter(w)
 
-	task := workerpool.NewTask(context.Background(), func(ctx context.Context) (interface{}, error) {
+	result := make(chan error, 1)
+	go func() {
 		h := make(textproto.MIMEHeader)
 		h.Set("Content-Disposition", fmt.Sprintf(`form-data; name="file"; filename="%s"`, normalizeName(filename)))
 		if mtype == "" {
@@ -193,9 +187,8 @@ func (c *httpClient) upload(url string, filename string, fileReader io.Reader, m
 			_ = w.Close()
 		}
 
-		return nil, err
-	})
-	c.workers.Do(task)
+		result <- err
+	}()
 
 	// request
 	req, err := http.NewRequest(http.MethodPost, url, r)
@@ -217,9 +210,8 @@ func (c *httpClient) upload(url string, filename string, fileReader io.Reader, m
 	_ = r.Close()
 
 	if err == nil {
-		if respBody, statusCode, err = ReadAll(res); err == nil {
-			result := <-task.Result()
-			err = result.Err
+		if respBody, statusCode, err = readAll(res); err == nil {
+			err = <-result
 		}
 	}
 

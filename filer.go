@@ -34,7 +34,7 @@ func NewFiler(u string, client *http.Client, opts ...FilerOption) (f *Filer, err
 
 func newFiler(u string, client *http.Client, opts ...FilerOption) (f *Filer, err error) {
 	// base url
-	base, err := ParseURI(u)
+	base, err := parseURI(u)
 	if err != nil {
 		return
 	}
@@ -88,7 +88,7 @@ func (f *Filer) UploadFile(localFilePath, newPath, collection, ttl string) (resu
 
 	// upload
 	var data []byte
-	data, status, err := f.client.upload(EncodeURI(*f.base, newPath, normalize(nil, collection, ttl)), localFilePath, fileReader, fp.MimeType)
+	data, status, err := f.client.upload(encodeURI(*f.base, newPath, normalize(nil, collection, ttl)), localFilePath, fileReader, fp.MimeType)
 	if err != nil {
 		return result, err
 	}
@@ -139,7 +139,7 @@ func (f *Filer) Upload(content io.Reader, fileSize int64, newPath, collection, t
 	fp := NewFilePartFromReader(ioutil.NopCloser(content), newPath, fileSize)
 
 	var data []byte
-	data, _, err = f.client.upload(EncodeURI(*f.base, newPath, normalize(nil, collection, ttl)), newPath, ioutil.NopCloser(content), "")
+	data, _, err = f.client.upload(encodeURI(*f.base, newPath, normalize(nil, collection, ttl)), newPath, ioutil.NopCloser(content), "")
 	if err == nil {
 		result = &FilerUploadResult{}
 		err = json.Unmarshal(data, result)
@@ -191,7 +191,7 @@ func (f *Filer) ListDirRecursive(path string) (files []FilerFileInfo, err error)
 
 // Get response data from filer.
 func (f *Filer) Get(path string, args url.Values, header map[string]string) (data []byte, statusCode int, err error) {
-	data, statusCode, err = f.client.get(EncodeURI(*f.base, path, args), header)
+	data, statusCode, err = f.client.get(encodeURI(*f.base, path, args), header)
 	return
 }
 
@@ -200,31 +200,31 @@ func (f *Filer) GetJson(path string, args url.Values) (data []byte, statusCode i
 	header := map[string]string{
 		"Accept": "application/json",
 	}
-	data, statusCode, err = f.client.get(EncodeURI(*f.base, path, args), header)
+	data, statusCode, err = f.client.get(encodeURI(*f.base, path, args), header)
 	return
 }
 
 // Download a file.
 func (f *Filer) Download(path string, args url.Values, callback func(io.Reader) error) (err error) {
-	_, err = f.client.download(EncodeURI(*f.base, path, args), callback)
+	_, err = f.client.download(encodeURI(*f.base, path, args), callback)
 	return
 }
 
 // Delete a file/dir.
 func (f *Filer) Delete(path string, args url.Values) (err error) {
-	_, err = f.client.delete(EncodeURI(*f.base, path, args))
+	_, err = f.client.delete(encodeURI(*f.base, path, args))
 	return
 }
 
 // DeleteDir a dir.
 func (f *Filer) DeleteDir(path string) (err error) {
 	args := map[string][]string{"recursive": {"true"}}
-	_, err = f.client.delete(EncodeURI(*f.base, path, args))
+	_, err = f.client.delete(encodeURI(*f.base, path, args))
 	return
 }
 
 // DeleteFile a file.
 func (f *Filer) DeleteFile(path string) (err error) {
-	_, err = f.client.delete(EncodeURI(*f.base, path, nil))
+	_, err = f.client.delete(encodeURI(*f.base, path, nil))
 	return
 }

@@ -1,7 +1,6 @@
 package goseaweedfs
 
 import (
-	"context"
 	"crypto/md5"
 	"encoding/base64"
 	"io"
@@ -10,19 +9,10 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
-
-	workerpool "github.com/linxGnu/gumble/worker-pool"
 )
 
-func CreateWorkerPool() *workerpool.Pool {
-	return workerpool.NewPool(context.Background(), workerpool.Option{
-		NumberWorker: runtime.NumCPU() << 1,
-	})
-}
-
-func ParseURI(uri string) (u *url.URL, err error) {
+func parseURI(uri string) (u *url.URL, err error) {
 	u, err = url.Parse(uri)
 	if err == nil && u.Scheme == "" {
 		u.Scheme = "http"
@@ -30,8 +20,8 @@ func ParseURI(uri string) (u *url.URL, err error) {
 	return
 }
 
-func EncodeURI(base url.URL, path string, args url.Values) string {
-	base.Path += path
+func encodeURI(base url.URL, path string, args url.Values) string {
+	base.Path = path
 	query := base.Query()
 	args = normalize(args, "", "")
 	for k, vs := range args {
@@ -65,7 +55,7 @@ func normalizeName(st string) string {
 	return st
 }
 
-func DrainAndClose(body io.ReadCloser) {
+func drainAndClose(body io.ReadCloser) {
 	_, _ = io.Copy(ioutil.Discard, body)
 	_ = body.Close()
 }
@@ -86,7 +76,7 @@ func normalize(values url.Values, collection, ttl string) url.Values {
 	return values
 }
 
-func ReadAll(r *http.Response) (body []byte, statusCode int, err error) {
+func readAll(r *http.Response) (body []byte, statusCode int, err error) {
 	statusCode = r.StatusCode
 	body, err = ioutil.ReadAll(r.Body)
 	r.Body.Close()

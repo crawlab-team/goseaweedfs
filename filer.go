@@ -90,7 +90,9 @@ func (f *Filer) UploadFile(localFilePath, newPath, collection, ttl string) (resu
 	var data []byte
 	data, status, err := f.client.upload(encodeURI(*f.base, newPath, normalize(nil, collection, ttl)), localFilePath, fileReader, fp.MimeType)
 	if err != nil {
-		return result, err
+		if !strings.Contains(err.Error(), "The process cannot access the file because another process has locked a portion of the file.") {
+			return result, err
+		}
 	}
 
 	// upload result
@@ -113,6 +115,9 @@ func (f *Filer) UploadFile(localFilePath, newPath, collection, ttl string) (resu
 
 // UploadDir upload files from a directory.
 func (f *Filer) UploadDir(localDirPath, newPath, collection, ttl string) (results []*FilerUploadResult, err error) {
+	// normalize path
+	localDirPath = normalizePath(localDirPath)
+
 	if strings.HasSuffix(localDirPath, "/") {
 		localDirPath = localDirPath[:(len(localDirPath) - 1)]
 	}
@@ -124,8 +129,9 @@ func (f *Filer) UploadDir(localDirPath, newPath, collection, ttl string) (result
 		return results, err
 	}
 	for _, info := range files {
-		newFilePath := newPath + strings.Replace(info.Path, localDirPath, "", -1)
-		result, err := f.UploadFile(info.Path, newFilePath, collection, ttl)
+		filePath := normalizePath(info.Path)
+		newFilePath := newPath + strings.Replace(filePath, localDirPath, "", -1)
+		result, err := f.UploadFile(filePath, newFilePath, collection, ttl)
 		if err != nil {
 			return results, err
 		}

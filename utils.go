@@ -93,15 +93,13 @@ func IsDir(path string) bool {
 
 func ListFilesRecursive(dirPath string) (files []FileInfo, err error) {
 	if err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+		path = strings.ReplaceAll(path, "\\", "/")
 		if !IsDir(path) {
 			f, err := os.Open(path)
 			if err != nil {
 				return err
 			}
-			md5sum, err := GetFileMd5sum(path)
-			if err != nil {
-				return err
-			}
+			md5sum, _ := GetFileMd5sum(path)
 			path, err = filepath.Abs(path)
 			if err != nil {
 				return err
@@ -117,10 +115,6 @@ func ListFilesRecursive(dirPath string) (files []FileInfo, err error) {
 		return files, err
 	}
 	return
-}
-
-func ListLocalFilesRecursive(dirPath string) (files []FileInfo, err error) {
-	return ListFilesRecursive(dirPath)
 }
 
 func GetFileName(fullPath string) (fileName string) {
@@ -158,7 +152,7 @@ func GetFileWithExtendedFields(file FilerFileInfo) (res FilerFileInfo) {
 }
 
 func GetFileMd5sum(filePath string) (md5sum string, err error) {
-	data, err := ioutil.ReadFile(filePath)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return md5sum, err
 	}
@@ -174,4 +168,9 @@ func GetBytesMd5sum(data []byte) (md5sum string, err error) {
 	}
 	md5sum = base64.StdEncoding.EncodeToString(h.Sum(nil))
 	return md5sum, nil
+}
+
+func normalizePath(path string) (newPath string) {
+	newPath = strings.ReplaceAll(path, "\\", "/")
+	return newPath
 }
